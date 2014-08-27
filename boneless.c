@@ -37,10 +37,13 @@ ZEND_GET_MODULE(boneless)
 
 PHP_FUNCTION(route_parser)
 {
-    zval *route;
-    char *uri, *root, *full_path, *token, *string, *string_cat = NULL, *new_string_cat = NULL;
+    zval *params;
+    char *uri, *root, *full_path, *token, *string;
+    char *string_cat = NULL, *new_string_cat = NULL;
     int uri_len, root_len;
     struct stat s;
+    int is_param = 0;
+    
     
     if (zend_parse_parameters(
         ZEND_NUM_ARGS() TSRMLS_CC, "ss", 
@@ -49,36 +52,50 @@ PHP_FUNCTION(route_parser)
         RETURN_NULL();
     }
     
+    ALLOC_INIT_ZVAL(params);
+    array_init(params);
+    
     string = strdup(uri);
-    while ((token = strsep(&string, "/")) != NULL) {
-        full_path = malloc(strlen(root) + strlen(token) + 2);
-        
-        if (string_cat == NULL)
+    while ((token = strsep(&string, "/")) != NULL) 
+    {
+        if (!is_param)
         {
-            string_cat = malloc(strlen(token) + 2);
-            strcpy(string_cat, token);
+            full_path = malloc(strlen(root) + strlen(token) + 2);
+            
+            if (string_cat == NULL)
+            {
+                string_cat = malloc(strlen(token) + 2);
+                strcpy(string_cat, token);
+            }
+            else
+            {
+                new_string_cat = realloc(string_cat, 
+                    (strlen(string_cat) + strlen(token) + 3));
+                string_cat = new_string_cat;
+                strcat(string_cat, "/");
+                strcat(string_cat, token);
+            }
+            
+            strcpy(full_path, root);
+            strcat(full_path, string_cat);
+
+            if (stat(full_path, &s) == 0)
+            {
+                if( s.st_mode & S_IFREG )
+                {   
+                    array_init(return_value);
+
+                    add_assoc_stringl(return_value, "file", full_path, strlen(full_path) + 1, 1);
+                    
+                    is_param = 1;
+                }
+            }
         }
         else
         {
-            new_string_cat = realloc(string_cat, 
-                (strlen(string_cat) + strlen(token) + 3));
-            string_cat = new_string_cat;
-            strcat(string_cat, "/");
-            strcat(string_cat, token);
-        }
-        
-        strcpy(full_path, root);
-        strcat(full_path, string_cat);
-
-        if (stat(full_path, &s) == 0)
-        {
-            if( s.st_mode & S_IFREG )
-            {   
-                array_init(return_value);
-
-                add_assoc_stringl(return_value, "file", full_path, strlen(full_path) + 1, 1);
-                break;
-            }
+            add_next_index_string(params, token, 1);
         }
     }
+    
+    add_assoc_zval(return_value, "params", params);
 }

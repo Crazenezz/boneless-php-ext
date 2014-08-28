@@ -60,8 +60,6 @@ PHP_FUNCTION(route_parser)
     {
         if (!is_param)
         {
-            full_path = malloc(strlen(root) + strlen(token) + 2);
-            
             if (string_cat == NULL)
             {
                 string_cat = malloc(strlen(token) + 2);
@@ -76,16 +74,18 @@ PHP_FUNCTION(route_parser)
                 strcat(string_cat, token);
             }
             
+            full_path = malloc(strlen(root) + strlen(string_cat) + 6);
             strcpy(full_path, root);
             strcat(full_path, string_cat);
 
-            if (stat(full_path, &s) == 0)
+            if (stat(strcat(full_path, ".php"), &s) == 0)
             {
-                if( s.st_mode & S_IFREG )
+                if(s.st_mode & S_IFREG)
                 {   
                     array_init(return_value);
 
-                    add_assoc_stringl(return_value, "file", full_path, strlen(full_path) + 1, 1);
+                    add_assoc_stringl(return_value, "controller", 
+                        string_cat, strlen(string_cat) + 1, 1);
                     
                     is_param = 1;
                 }

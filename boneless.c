@@ -85,7 +85,7 @@ PHP_FUNCTION(route_parser)
                     array_init(return_value);
 
                     add_assoc_stringl(return_value, "controller", 
-                        string_cat, strlen(string_cat) + 1, 1);
+                        string_cat, strlen(string_cat), 1);
                     
                     is_param = 1;
                 }
